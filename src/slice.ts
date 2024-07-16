@@ -1,9 +1,9 @@
 import {createAsyncThunk, createSlice, PayloadAction} from "@reduxjs/toolkit";
 import axiosApi from "./axiosApi.ts";
-
+import {RootState} from "./store.ts";
 
 interface Task {
-    id: number;
+    id: string;
     title: string;
     completed: boolean;
 }
@@ -20,7 +20,7 @@ const initialState: TasksState = {
     error: false,
 };
 
-export const FetchTasks = createAsyncThunk<Task[],void>(
+export const FetchTasks = createAsyncThunk<Task[]>(
     'todoList/fetch',
     async () => {
         const response = await axiosApi.get<Task[]>('/todo-list.json');
@@ -38,6 +38,14 @@ export const addTasks = createAsyncThunk(
     async (text:string) => {
         const response = await axiosApi.post<Task>('/todo-list.json',{text});
         return response.data;
+    }
+)
+
+export const deleteTask = createAsyncThunk<string, string,{state: RootState}>(
+    'todoList/delete',
+    async (id: string) => {
+        await axiosApi.delete(`/todo-list/${id}.json`);
+        return id;
     }
 )
 
@@ -59,6 +67,19 @@ export const TodoLustSlice = createSlice<TasksState, {}>({
         builder.addCase(FetchTasks.rejected, (state) => {
             state.loading = false;
             state.error = true;
+        });
+        builder.addCase(deleteTask.pending, (state) => {
+            state.loading = true;
+        });
+        builder.addCase(deleteTask.fulfilled, (state,action:PayloadAction<string>) => {
+            state.loading = false;
+            state.tasks = state.tasks.filter((task) => task.id !== action.payload );
+        });
+        builder.addCase(addTasks.pending, (state) => {
+            state.loading = true;
+        });
+        builder.addCase(addTasks.fulfilled, (state) => {
+            state.loading = false;
         });
     }
 });
